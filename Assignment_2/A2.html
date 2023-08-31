@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+
+<html>
+  <head>
+    <title>WebGL 3D Cube Drawing</title>
+    <meta http-equiv="content-type" content="text/html; charset=ISO-8859-1" />
+    <script type="text/javascript" src="glMatrix-0.9.5.min.js"></script>
+    <script type="text/javascript" src="A2.js"></script>
+  </head>
+
+  <body onload="webGLStart();">
+    <canvas
+      id="A2"
+      style="border: none"
+      width="1500"
+      height="500"
+    ></canvas>
+
+    <div class="sliders">
+        <label for="slider">Light position <br></label>
+        <input
+          autocomplete="off"
+          type="range"
+          min="-10"
+          max="10"
+          value="0"
+          id="sliderId"
+          oninput="lightPosChange(value)"
+        />
+      </div>
+
+      <div class="sliders">
+        <label for="slider">Camera distance<br></label>
+        <input
+          autocomplete="off"
+          type="range"
+          min="1"
+          max="11"
+          value="2"
+          id="sliderId"
+          oninput = "cameraPos(value)"
+        />
+      </div>
+    
+
+  </body>
+</html>
