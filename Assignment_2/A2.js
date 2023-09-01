@@ -44,8 +44,61 @@ var spVerts = [];
 var spIndicies = [];
 var spNormals = [];
 
+// shader programs
+var perVertshaderProgram;
+var perFragshaderProgram;
+var flatshaderProgram;
 
-// Vertex shader code
+
+// Vertex shader code for PER FRAGMENT SHADING
+const perFragVertexShaderCode =`#version 300 es
+in vec3 aPosition;
+uniform mat4 uMMatrix;
+uniform mat4 uPMatrix;
+uniform mat4 uVMatrix;
+
+void main() {
+  mat4 projectionModelView;
+	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
+  gl_Position = projectionModelView*vec4(aPosition,1.0);
+  gl_PointSize=2.5;
+}`;
+
+// Fragment shader code for PER VERTEX SHADING
+const perFragFragShaderCode=`#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform vec4 objColor;
+
+void main() {
+  fragColor = objColor;
+}`;
+
+// Vertex shader code for PER VERTEX SHADING
+const perVertVertexShaderCode =`#version 300 es
+in vec3 aPosition;
+uniform mat4 uMMatrix;
+uniform mat4 uPMatrix;
+uniform mat4 uVMatrix;
+
+void main() {
+  mat4 projectionModelView;
+	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
+  gl_Position = projectionModelView*vec4(aPosition,1.0);
+  gl_PointSize=2.5;
+}`;
+
+// Fragment shader code for PER VERTEX SHADING
+const perVertFragShaderCode=`#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform vec4 objColor;
+
+void main() {
+  fragColor = objColor;
+}`;
+
+// Vertex shader code for FLAT SHADING
 const flatShadingVertexShaderCode = `#version 300 es
 in vec3 aPosition;
 uniform mat4 uMMatrix;
@@ -63,7 +116,7 @@ void main() {
   posInEyeSpace -= eyePos;
 }`;
 
-// Fragment shader code
+// Fragment shader code for FLAT SHADING
 const flatShadingFragShaderCode = `#version 300 es
 precision mediump float;
 out vec4 fragColor;
@@ -99,6 +152,21 @@ function lightPosChange(value) {
 }
 
 function leftPort() {
+  // set shader program
+  shaderProgram = flatshaderProgram;
+  gl.useProgram(shaderProgram);
+  gl.enable(gl.SCISSOR_TEST);
+
+  // set variables and attributes or shader
+  aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
+  uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
+  uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
+  uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
+  uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
+  uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
+  uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  // setup viewport
   gl.viewport(0, 0, 500, 500);
   gl.scissor(0, 0, 500, 500);
   gl.clearColor(0.85, 0.85, 0.95, 1.0);
@@ -124,6 +192,21 @@ function drawLeftScene() {
 }
 
 function middlePort() {
+  // set shader program
+  shaderProgram = perVertshaderProgram;
+  gl.useProgram(shaderProgram);
+  gl.enable(gl.SCISSOR_TEST);
+
+  // set variables and attributes or shader
+  aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
+  uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
+  uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
+  uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
+  uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
+  uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
+  uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  // setup viewport
   gl.viewport(500, 0, 500, 500);
   gl.scissor(500, 0, 500, 500);
   gl.clearColor(0.95,0.85 , 0.95, 1.0);
@@ -131,6 +214,21 @@ function middlePort() {
 }
 
 function rightPort() {
+  // set shader program
+  shaderProgram = perFragshaderProgram;
+  gl.useProgram(shaderProgram);
+  gl.enable(gl.SCISSOR_TEST);
+
+  // set variables and attributes or shader
+  aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
+  uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
+  uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
+  uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
+  uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
+  uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
+  uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  // setup viewport
   gl.viewport(1000, 0, 500, 500);
   gl.scissor(1000, 0, 500, 500);
   gl.clearColor(0.85, 0.95, 0.85, 1.0);
@@ -544,17 +642,13 @@ function webGLStart() {
   initGL(canvas);
 
   // initialize shader program
-  shaderProgram = initShaders(flatShadingVertexShaderCode,flatShadingFragShaderCode);
+  flatshaderProgram = initShaders(flatShadingVertexShaderCode,flatShadingFragShaderCode);
+  perVertshaderProgram = initShaders(perVertVertexShaderCode,perVertFragShaderCode);
+  perFragshaderProgram = initShaders(perFragVertexShaderCode,perFragFragShaderCode);
+
 
   //get locations of attributes and uniforms declared in the shader
-  
-  aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
-  uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
-  uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
-  uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
-  uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
-  uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
-  uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
 
   //enable the attribute arrays
   
