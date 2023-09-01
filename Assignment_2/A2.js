@@ -193,7 +193,7 @@ function drawLeftScene() {
 
 function middlePort() {
   // set shader program
-  shaderProgram = perVertshaderProgram;
+  shaderProgram = flatshaderProgram;
   gl.useProgram(shaderProgram);
   gl.enable(gl.SCISSOR_TEST);
 
@@ -211,6 +211,28 @@ function middlePort() {
   gl.scissor(500, 0, 500, 500);
   gl.clearColor(0.95,0.85 , 0.95, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+}
+
+function drawMiddleScene() {
+
+  var sphcolor = [0.8,0.8,0.8,1.0];
+  var cubcolor = [0,0.8,0,1];
+  // centre sphere
+  pushMatrix(matrixStack,mMatrix);
+  // mMatrix = mat4.translate(mMatrix,[0,0,0,0]);
+  mMatrix = mat4.scale(mMatrix,[0.5,0.5,0.5,1]);
+  drawSphere(sphcolor);
+  mMatrix = popMatrix(matrixStack);
+
+  middlehelper(sphcolor,cubcolor);
+
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0.15,1.1,-0.3,0]);
+  mMatrix = mat4.rotate(mMatrix,degToRad(45),[1,1,1]);
+  mMatrix = mat4.scale(mMatrix,[0.7,0.7,0.7,1]);
+  middlehelper(sphcolor,cubcolor);
+  mMatrix = popMatrix(matrixStack);
+
 }
 
 function rightPort() {
@@ -235,6 +257,22 @@ function rightPort() {
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
  
+function middlehelper(sphcolor,cubcolor) {
+  // cube 1
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.1,0,0]);
+  mMatrix = mat4.scale(mMatrix,[0.6,0.6,0.6,1]);
+  drawCube(cubcolor);
+  mMatrix = popMatrix(matrixStack);
+
+  // sphere 2
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.7,0,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3,1]);
+  drawSphere(sphcolor);
+  mMatrix = popMatrix(matrixStack);
+}
+
 function pushMatrix(stack, m) {
 	//necessary because javascript only does shallow push
 	var copy = mat4.create(m);
@@ -567,11 +605,13 @@ function drawScene() {
   mMatrix = popMatrix(matrixStack);
 
   middlePort();
-  // pushMatrix(matrixStack,mMatrix);
-  // mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
-  // mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
-  // drawMiddleScene();
-  // mMatrix = popMatrix(matrixStack);
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0.4,-0.5,0,0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
+  mMatrix = mat4.scale(mMatrix,[1.4,1.4,1.4,1]);
+  drawMiddleScene();
+  mMatrix = popMatrix(matrixStack);
 
 
   rightPort();
