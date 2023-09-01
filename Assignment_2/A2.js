@@ -1,3 +1,37 @@
+var gl;
+var canvas;
+
+var matrixStack = [];
+
+var buf;
+var indexBuf;
+var aPositionLocation;
+var aNormalLocation;
+var uColorLocation;
+var uPMatrixLocation;
+var uMMatrixLocation;
+var uVMatrixLocation;
+var uLightLocation;
+
+var degree1 = 0.0;
+var degree0 = 0.0;
+var prevMouseX = 0.0;
+var prevMouseY = 0.0;
+
+// initialize model, view, and projection matrices
+var vMatrix = mat4.create(); // view matrix
+var mMatrix = mat4.create(); // model matrix
+var pMatrix = mat4.create(); //projection matrix
+
+// specify camera/eye coordinate system parameters
+var eyePos = [0.0, 0.0, 2.0];
+var COI = [0.0, 0.0, 0.0];
+var viewUp = [0.0, 1.0, 0.0];
+
+// specify light coordinates
+var light = [0.0, 0.0, 5.0];
+
+
 var buf;
 var indexBuf;
 var cubeNormalBuf;
@@ -9,6 +43,50 @@ var color =[];
 var spVerts = [];
 var spIndicies = [];
 var spNormals = [];
+
+
+// Vertex shader code
+const flatShadingVertexShaderCode = `#version 300 es
+in vec3 aPosition;
+uniform mat4 uMMatrix;
+uniform mat4 uPMatrix;
+uniform mat4 uVMatrix;
+uniform vec3 eyePos;
+out vec3 posInEyeSpace;
+
+void main() {
+  mat4 projectionModelView;
+	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
+  gl_Position = projectionModelView*vec4(aPosition,1.0);
+  gl_PointSize=2.5;
+  posInEyeSpace = (uMMatrix*vec4(aPosition,1.0)).xyz;
+  posInEyeSpace -= eyePos;
+}`;
+
+// Fragment shader code
+const flatShadingFragShaderCode = `#version 300 es
+precision mediump float;
+out vec4 fragColor;
+uniform vec4 objColor;
+uniform mat4 uVmatrix;
+uniform vec3 lightPos;
+in vec3 posInEyeSpace;
+
+void main() {
+  vec3 normal = normalize(cross(dFdx(posInEyeSpace), dFdy(posInEyeSpace)));
+  vec3 L = normalize(posInEyeSpace-lightPos);
+  vec3 R = normalize(-reflect(L,normal));
+  vec3 V = normalize(-posInEyeSpace);
+  mediump float diff = -dot(L,normal);
+  mediump float spec = -dot(R,V);
+  if (diff<0.0)
+    diff = 0.0;
+  if (spec<0.0)
+    spec =0.0;
+  fragColor = objColor * (0.2 + 1.0*diff + spec*spec*spec*spec*spec*spec*spec*spec*spec*spec*spec*spec);
+  fragColor.a=1.0;
+}`;
+
 
 function cameraPos(value) {
   eyePos[2] = Number(value);
@@ -300,84 +378,6 @@ function drawCube(color) {
   //gl.drawArrays(gl.POINTS, 0, buf.numItems); // show points
 }
 
-var gl;
-var canvas;
-
-var matrixStack = [];
-
-var buf;
-var indexBuf;
-var aPositionLocation;
-var aNormalLocation;
-var uColorLocation;
-var uPMatrixLocation;
-var uMMatrixLocation;
-var uVMatrixLocation;
-var uLightLocation;
-
-var degree1 = 0.0;
-var degree0 = 0.0;
-var prevMouseX = 0.0;
-var prevMouseY = 0.0;
-
-// initialize model, view, and projection matrices
-var vMatrix = mat4.create(); // view matrix
-var mMatrix = mat4.create(); // model matrix
-var pMatrix = mat4.create(); //projection matrix
-
-// specify camera/eye coordinate system parameters
-var eyePos = [0.0, 0.0, 2.0];
-var COI = [0.0, 0.0, 0.0];
-var viewUp = [0.0, 1.0, 0.0];
-
-// specify light coordinates
-var light = [0,0.0,0.0];
-
-// Vertex shader code
-const vertexShaderCode = `#version 300 es
-in vec3 aPosition;
-uniform vec3 lightPos1;
-out vec3 lightPos;
-uniform mat4 uMMatrix;
-uniform mat4 uPMatrix;
-uniform mat4 uVMatrix;
-uniform vec3 eyePos;
-out vec3 posInEyeSpace;
-
-void main() {
-  mat4 projectionModelView;
-	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
-  gl_Position = projectionModelView*vec4(aPosition,1.0);
-  gl_PointSize=2.5;
-  posInEyeSpace = (uMMatrix*vec4(aPosition,1.0)).xyz;
-  posInEyeSpace -= eyePos;
-  lightPos = lightPos1;
-}`;
-
-// Fragment shader code
-const fragShaderCode = `#version 300 es
-precision mediump float;
-out vec4 fragColor;
-uniform vec4 objColor;
-uniform mat4 uVmatrix;
-in vec3 posInEyeSpace;
-in vec3 lightPos;
-
-void main() {
-  vec3 normal = normalize(cross(dFdx(posInEyeSpace), dFdy(posInEyeSpace)));
-  vec3 L = normalize(posInEyeSpace-lightPos);
-  vec3 R = normalize(-reflect(L,normal));
-  vec3 V = normalize(-posInEyeSpace);
-  mediump float diff = -dot(L,normal);
-  mediump float spec = -dot(R,V);
-  if (diff<0.0)
-    diff = 0.0;
-  if (spec<0.0)
-    spec =0.0;
-  fragColor = objColor * (0.2 + 1.2*diff + 0.2*spec);
-  fragColor.a=1.0;
-}`;
-
 function vertexShaderSetup(vertexShaderCode) {
   shader = gl.createShader(gl.VERTEX_SHADER);
   gl.shaderSource(shader, vertexShaderCode);
@@ -402,7 +402,7 @@ function fragmentShaderSetup(fragShaderCode) {
   return shader;
 }
 
-function initShaders() {
+function initShaders(vertexShaderCode,fragShaderCode) {
   shaderProgram = gl.createProgram();
 
   var vertexShader = vertexShaderSetup(vertexShaderCode);
@@ -544,12 +544,12 @@ function webGLStart() {
   initGL(canvas);
 
   // initialize shader program
-  shaderProgram = initShaders();
+  shaderProgram = initShaders(flatShadingVertexShaderCode,flatShadingFragShaderCode);
 
   //get locations of attributes and uniforms declared in the shader
   
   aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
-  aLightLocation = gl.getAttribLocation(shaderProgram, "lightPos1");
+  uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
   uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
   uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
   uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
