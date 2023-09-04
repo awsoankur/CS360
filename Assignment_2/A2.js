@@ -13,8 +13,12 @@ var uMMatrixLocation;
 var uVMatrixLocation;
 var uLightLocation;
 
-var degree1 = 0.0;
-var degree0 = 0.0;
+var degreel1 = 0.0;
+var degreel0 = 0.0;
+var degreem1 = 0.0;
+var degreem0 = 0.0;
+var degreer1 = 0.0;
+var degreer0 = 0.0;
 var prevMouseX = 0.0;
 var prevMouseY = 0.0;
 
@@ -89,8 +93,8 @@ void main() {
   vec3 R = normalize(-reflect(L,normal)); 
   vec3 V = normalize(-posInEyeSpace);
   mediump float diff = max(dot(L,normal),0.0);
-  mediump float spec = max(dot(R,V),0.0);
-  fragColor = objColor * (0.2 + 1.0*diff + 1.0*pow(spec,10.0) );
+  mediump float spec = max(dot(R,V),-0.1);
+  fragColor = objColor * (0.2 + 1.0*diff) + vec4(1,1,1,0)*pow(spec,10.0);
   fragColor.a=1.0;
 }`;
 
@@ -120,7 +124,7 @@ void main() {
   vec3 V = normalize(-posInEyeSpace);
   mediump float diff = max(dot(L,normal),0.0);
   mediump float spec = max(dot(R,V),0.0);
-  vertexColor = objColor * (0.2 + 1.0 * diff + 1.0 *pow(spec,10.0));
+  vertexColor = objColor * (0.2 + 1.0*diff) + vec4(1,1,1,0)*pow(spec,40.0);
   vertexColor.a = 1.0;
 }`; 
 
@@ -170,7 +174,7 @@ void main() {
   vec3 V = normalize(-posInEyeSpace);
   mediump float diff = max(dot(L,normal),0.0);
   mediump float spec = max(dot(R,V),0.0);
-  fragColor = objColor * (0.2 + 1.0*diff + 1.0*pow(spec,10.0) );
+  fragColor = objColor * (0.2 + 1.0*diff) + vec4(1,1,1,0)*pow(spec,20.0);
   fragColor.a=1.0;
 }`;
 
@@ -277,6 +281,23 @@ function drawMiddleScene() {
 
 }
 
+
+function middlehelper(sphcolor,cubcolor) {
+  // cube 1
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.1,0,0]);
+  mMatrix = mat4.scale(mMatrix,[0.6,0.6,0.6,1]);
+  drawCube(cubcolor);
+  mMatrix = popMatrix(matrixStack);
+  
+  // sphere 2
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.7,0,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3,1]);
+  drawSphere(sphcolor);
+  mMatrix = popMatrix(matrixStack);
+}
+
 function rightPort() {
   // set shader program
   shaderProgram = perFragshaderProgram;
@@ -302,25 +323,79 @@ function rightPort() {
   gl.clearColor(0.85, 0.95, 0.85, 1.0);
   gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
 }
- 
-function middlehelper(sphcolor,cubcolor) {
-  // cube 1
+
+function drawRightScene() {
+  // bottom sphere
   pushMatrix(matrixStack,mMatrix);
-  mMatrix = mat4.translate(mMatrix,[-0.8,0.1,0,0]);
-  mMatrix = mat4.scale(mMatrix,[0.6,0.6,0.6,1]);
-  drawCube(cubcolor);
+  mMatrix = mat4.translate(mMatrix,[0,-1,0]);
+  mMatrix = mat4.scale(mMatrix,[0.4,0.4,0.4]);
+  drawSphere([0,1,0,1]);
+  mMatrix = popMatrix(matrixStack);
+  // bottom slab
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0,-0.6,0]);
+  mMatrix = mat4.scale(mMatrix,[2.4,0.1,0.6]);
+  drawCube([0.6,0.1,0.0,1]);
   mMatrix = popMatrix(matrixStack);
 
-  // sphere 2
+  // bottom left ball
   pushMatrix(matrixStack,mMatrix);
-  mMatrix = mat4.translate(mMatrix,[-0.8,0.7,0,0]);
-  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3,1]);
-  drawSphere(sphcolor);
+  mMatrix = mat4.translate(mMatrix,[-0.8,-0.26,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3]);
+  drawSphere([0.37,0.40,0.77,1]);
+  mMatrix = popMatrix(matrixStack);
+  // bottom right ball
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0.8,-0.26,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3]);
+  drawSphere([0,0.7,0.7,1]);
+  mMatrix = popMatrix(matrixStack);
+
+  // middle slab left
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.08,0]);
+  mMatrix = mat4.rotate(mMatrix,degToRad(90),[0,1,0]);
+  mMatrix = mat4.scale(mMatrix,[2.4,0.1,0.6]);
+  drawCube([1,1,0,1]);
+  mMatrix = popMatrix(matrixStack);
+  // middle slab right
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0.8,0.08,0]);
+  mMatrix = mat4.rotate(mMatrix,degToRad(90),[0,1,0]);
+  mMatrix = mat4.scale(mMatrix,[2.4,0.1,0.6]);
+  drawCube([0.20,0.61,0.51,1]);
+  mMatrix = popMatrix(matrixStack);
+
+  // top left ball
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[-0.8,0.45,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3]);
+  drawSphere([1,0,1,1]);
+  mMatrix = popMatrix(matrixStack);
+  // top right ball
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0.8,0.45,0]);
+  mMatrix = mat4.scale(mMatrix,[0.3,0.3,0.3]);
+  drawSphere([0.48,0.35,0.11,1]);
+  mMatrix = popMatrix(matrixStack);  
+
+  // top slab 
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0,0.8,0]);
+  mMatrix = mat4.scale(mMatrix,[2.4,0.1,0.6]);
+  drawCube([0.6,0.1,0.0,1]);
+  mMatrix = popMatrix(matrixStack);
+
+  // top ball
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0,1.23,0]);
+  mMatrix = mat4.scale(mMatrix,[0.4,0.4,0.4]);
+  drawSphere([0.47,0.47,0.6,1]);
   mMatrix = popMatrix(matrixStack);
 }
 
 function pushMatrix(stack, m) {
-	//necessary because javascript only does shallow push
+  //necessary because javascript only does shallow push
 	var copy = mat4.create(m);
 	stack.push(copy);
 }
@@ -667,8 +742,8 @@ function drawScene() {
 
   leftPort();
   pushMatrix(matrixStack,mMatrix);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreel0), [0, 1, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreel1), [1, 0, 0]);
   mMatrix = mat4.translate(mMatrix,[0,-0.4,0,0]);
   drawLeftScene();
   mMatrix = popMatrix(matrixStack);
@@ -676,8 +751,8 @@ function drawScene() {
   middlePort();
   pushMatrix(matrixStack,mMatrix);
   mMatrix = mat4.translate(mMatrix,[0.4,-0.5,0,0]);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreem0), [0, 1, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreem1), [1, 0, 0]);
   mMatrix = mat4.scale(mMatrix,[1.4,1.4,1.4,1]);
   drawMiddleScene();
   mMatrix = popMatrix(matrixStack);
@@ -685,9 +760,9 @@ function drawScene() {
 
   rightPort();
   pushMatrix(matrixStack,mMatrix);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
-  mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
-  drawMiddleScene();
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreer0), [0, 1, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degreer1), [1, 0, 0]);
+  drawRightScene();
   mMatrix = popMatrix(matrixStack);
 
 }
@@ -716,15 +791,42 @@ function onMouseMove(event) {
     event.layerY <= canvas.height &&
     event.layerY >= 0
   ) {
-    var mouseX = event.clientX;
-    var diffX1 = mouseX - prevMouseX;
-    prevMouseX = mouseX;
-    degree0 = degree0 + diffX1 / 5;
+    if (event.layerX<=canvas.width/3)
+    {
+      var mouseX = event.clientX;
+      var diffX1 = mouseX - prevMouseX;
+      prevMouseX = mouseX;
+      degreel0 = degreel0 + diffX1 / 5;
 
-    var mouseY = canvas.height - event.clientY;
-    var diffY2 = mouseY - prevMouseY;
-    prevMouseY = mouseY;
-    degree1 = degree1 - diffY2 / 5;
+      var mouseY = canvas.height - event.clientY;
+      var diffY2 = mouseY - prevMouseY;
+      prevMouseY = mouseY;
+      degreel1 = degreel1 - diffY2 / 5;
+    }
+    else if (event.layerX<=2*canvas.width/3)
+    {
+      var mouseX = event.clientX;
+      var diffX1 = mouseX - prevMouseX;
+      prevMouseX = mouseX;
+      degreem0 = degreem0 + diffX1 / 5;
+
+      var mouseY = canvas.height - event.clientY;
+      var diffY2 = mouseY - prevMouseY;
+      prevMouseY = mouseY;
+      degreem1 = degreem1 - diffY2 / 5;
+    }
+    else if (event.layerX<=canvas.width)
+    {
+      var mouseX = event.clientX;
+      var diffX1 = mouseX - prevMouseX;
+      prevMouseX = mouseX;
+      degreer0 = degreer0 + diffX1 / 5;
+
+      var mouseY = canvas.height - event.clientY;
+      var diffY2 = mouseY - prevMouseY;
+      prevMouseY = mouseY;
+      degreer1 = degreer1 - diffY2 / 5;
+    }
 
     drawScene();
   }
@@ -754,12 +856,6 @@ function webGLStart() {
   flatshaderProgram = initShaders(flatShadingVertexShaderCode,flatShadingFragShaderCode);
   perVertshaderProgram = initShaders(perVertVertexShaderCode,perVertFragShaderCode);
   perFragshaderProgram = initShaders(perFragVertexShaderCode,perFragFragShaderCode);
-
-
-
-  //enable the attribute arrays
-
-
 
   //initialize buffers for the square
   initCubeBuffer();
