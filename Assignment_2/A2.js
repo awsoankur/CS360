@@ -28,13 +28,12 @@ var mMatrix = mat4.create(); // model matrix
 var pMatrix = mat4.create(); //projection matrix
 
 // specify camera/eye coordinate system parameters
-var eyePos = [0.0, 0.0, 2.0];
+var eyePos = [0.0, 0.4, 2.0];
 var COI = [0.0, 0.0, 0.0];
 var viewUp = [0.0, 1.0, 0.0];
 
 // specify light coordinates
-var light = [0.0, 0.0, 5.0];
-
+var light = [0.0, 5.0, 5.0];
 
 var buf;
 var indexBuf;
@@ -280,7 +279,6 @@ function drawMiddleScene() {
   mMatrix = popMatrix(matrixStack);
 
 }
-
 
 function middlehelper(sphcolor,cubcolor) {
   // cube 1
@@ -760,6 +758,7 @@ function drawScene() {
 
   rightPort();
   pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.translate(mMatrix,[0,-0.1,0]);
   mMatrix = mat4.rotate(mMatrix, degToRad(degreer0), [0, 1, 0]);
   mMatrix = mat4.rotate(mMatrix, degToRad(degreer1), [1, 0, 0]);
   drawRightScene();
