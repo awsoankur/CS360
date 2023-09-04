@@ -48,20 +48,28 @@ var spNormals = [];
 var perVertshaderProgram;
 var perFragshaderProgram;
 var flatshaderProgram;
+var shaderProgram;
 
 
 // Vertex shader code for PER FRAGMENT SHADING
 const perFragVertexShaderCode =`#version 300 es
+precision mediump float;
 in vec3 aPosition;
 uniform mat4 uMMatrix;
 uniform mat4 uPMatrix;
 uniform mat4 uVMatrix;
+in vec3 aNormal;
+uniform vec3 eyePos;
+out vec3 posInEyeSpace;
+out vec3 anorm;
 
 void main() {
   mat4 projectionModelView;
 	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
   gl_Position = projectionModelView*vec4(aPosition,1.0);
   gl_PointSize=2.5;
+  posInEyeSpace = (uVMatrix*uMMatrix*vec4(aPosition,1.0)).xyz;
+  anorm = aNormal;
 }`;
 
 // Fragment shader code for PER VERTEX SHADING
@@ -69,33 +77,61 @@ const perFragFragShaderCode=`#version 300 es
 precision mediump float;
 out vec4 fragColor;
 uniform vec4 objColor;
+in vec3 anorm;
+uniform mat4 uVMatrix;
+uniform mat4 uMMatrix;
+uniform vec3 lightPos;
+in vec3 posInEyeSpace;
 
 void main() {
-  fragColor = objColor;
+  vec3 normal = normalize(transpose( inverse( mat3(uVMatrix*uMMatrix) ) ) * anorm);
+  vec3 L = normalize((uVMatrix*vec4(lightPos,0.0)).xyz-posInEyeSpace);
+  vec3 R = normalize(-reflect(L,normal)); 
+  vec3 V = normalize(-posInEyeSpace);
+  mediump float diff = max(dot(L,normal),0.0);
+  mediump float spec = max(dot(R,V),0.0);
+  fragColor = objColor * (0.2 + 1.0*diff + 1.0*pow(spec,10.0) );
+  fragColor.a=1.0;
 }`;
 
 // Vertex shader code for PER VERTEX SHADING
 const perVertVertexShaderCode =`#version 300 es
 in vec3 aPosition;
+in vec3 aNormal;
 uniform mat4 uMMatrix;
 uniform mat4 uPMatrix;
 uniform mat4 uVMatrix;
+uniform vec3 eyePos;
+uniform vec4 objColor;
+uniform vec3 lightPos;
+out vec3 posInEyeSpace;
+out vec4 vertexColor;
 
 void main() {
   mat4 projectionModelView;
 	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
   gl_Position = projectionModelView*vec4(aPosition,1.0);
-  gl_PointSize=2.5;
-}`;
+  gl_PointSize = 2.5;
+  posInEyeSpace = vec3(uVMatrix*uMMatrix*vec4(aPosition,1.0));
+
+  vec3 normal = normalize(transpose( inverse( mat3(uVMatrix*uMMatrix) ) ) * aNormal);
+  vec3 L = normalize((uVMatrix * vec4( lightPos,1.0 ) ).xyz -posInEyeSpace);
+  vec3 R = normalize(-reflect(L,normal));
+  vec3 V = normalize(-posInEyeSpace);
+  mediump float diff = max(dot(L,normal),0.0);
+  mediump float spec = max(dot(R,V),0.0);
+  vertexColor = objColor * (0.2 + 1.0 * diff + 1.0 *pow(spec,10.0));
+  vertexColor.a = 1.0;
+}`; 
 
 // Fragment shader code for PER VERTEX SHADING
 const perVertFragShaderCode=`#version 300 es
 precision mediump float;
 out vec4 fragColor;
-uniform vec4 objColor;
+in vec4 vertexColor;
 
 void main() {
-  fragColor = objColor;
+  fragColor = vertexColor;
 }`;
 
 // Vertex shader code for FLAT SHADING
@@ -106,14 +142,15 @@ uniform mat4 uPMatrix;
 uniform mat4 uVMatrix;
 uniform vec3 eyePos;
 out vec3 posInEyeSpace;
+out mat4 uvm;
 
 void main() {
   mat4 projectionModelView;
 	projectionModelView=uPMatrix*uVMatrix*uMMatrix;
   gl_Position = projectionModelView*vec4(aPosition,1.0);
   gl_PointSize=2.5;
-  posInEyeSpace = (uMMatrix*vec4(aPosition,1.0)).xyz;
-  posInEyeSpace -= eyePos;
+  posInEyeSpace = (uVMatrix*uMMatrix*vec4(aPosition,1.0)).xyz;
+  uvm = uVMatrix;
 }`;
 
 // Fragment shader code for FLAT SHADING
@@ -121,22 +158,19 @@ const flatShadingFragShaderCode = `#version 300 es
 precision mediump float;
 out vec4 fragColor;
 uniform vec4 objColor;
-uniform mat4 uVmatrix;
+// uniform mat4 uVMatrix;
+in mat4 uvm;
 uniform vec3 lightPos;
 in vec3 posInEyeSpace;
 
 void main() {
   vec3 normal = normalize(cross(dFdx(posInEyeSpace), dFdy(posInEyeSpace)));
-  vec3 L = normalize(posInEyeSpace-lightPos);
-  vec3 R = normalize(-reflect(L,normal));
+  vec3 L = normalize((uvm*vec4(lightPos,0.0)).xyz);
+  vec3 R = normalize(-reflect(L,normal)); 
   vec3 V = normalize(-posInEyeSpace);
-  mediump float diff = -dot(L,normal);
-  mediump float spec = -dot(R,V);
-  if (diff<0.0)
-    diff = 0.0;
-  if (spec<0.0)
-    spec =0.0;
-  fragColor = objColor * (0.2 + 1.0*diff + spec*spec*spec*spec*spec*spec*spec*spec*spec*spec*spec*spec);
+  mediump float diff = max(dot(L,normal),0.0);
+  mediump float spec = max(dot(R,V),0.0);
+  fragColor = objColor * (0.2 + 1.0*diff + 1.0*pow(spec,10.0) );
   fragColor.a=1.0;
 }`;
 
@@ -162,9 +196,13 @@ function leftPort() {
   uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
   uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
   uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
+  aNormalLocation = gl.getAttribLocation(shaderProgram, "aNormal");
   uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
   uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
   uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  gl.enableVertexAttribArray(aPositionLocation);
+  gl.enableVertexAttribArray(aNormalLocation);
 
   // setup viewport
   gl.viewport(0, 0, 500, 500);
@@ -193,18 +231,22 @@ function drawLeftScene() {
 
 function middlePort() {
   // set shader program
-  shaderProgram = flatshaderProgram;
+  shaderProgram = perVertshaderProgram;
   gl.useProgram(shaderProgram);
   gl.enable(gl.SCISSOR_TEST);
 
   // set variables and attributes or shader
   aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
+  aNormalLocation = gl.getAttribLocation(shaderProgram, "aNormal");
   uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
   uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
   uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
   uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
   uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
   uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  gl.enableVertexAttribArray(aPositionLocation);
+  gl.enableVertexAttribArray(aNormalLocation);
 
   // setup viewport
   gl.viewport(500, 0, 500, 500);
@@ -244,11 +286,15 @@ function rightPort() {
   // set variables and attributes or shader
   aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
   uLightLocation = gl.getUniformLocation(shaderProgram, "lightPos");
+  aNormalLocation = gl.getAttribLocation(shaderProgram, "aNormal");
   uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
   uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
   uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
   uColorLocation = gl.getUniformLocation(shaderProgram, "objColor");
   uEyeLocation = gl.getUniformLocation(shaderProgram, "eyePos");
+
+  gl.enableVertexAttribArray(aPositionLocation);
+  gl.enableVertexAttribArray(aNormalLocation);
 
   // setup viewport
   gl.viewport(1000, 0, 500, 500);
@@ -283,6 +329,7 @@ function popMatrix(stack) {
 	if (stack.length > 0) return stack.pop();
 	else console.log("stack has no matrix to pop!");
 }
+
 function initSphere(nslices, nstacks, radius) {
   var theta1, theta2;
 
@@ -375,6 +422,17 @@ function drawSphere(color) {
   gl.vertexAttribPointer(
     aPositionLocation,
     spBuf.itemSize,
+    gl.FLOAT,
+    false,
+    0,
+    0
+  );
+
+  // for normals
+  gl.bindBuffer(gl.ARRAY_BUFFER, spNormalBuf);
+  gl.vertexAttribPointer(
+    aNormalLocation,
+    spNormalBuf.itemSize,
     gl.FLOAT,
     false,
     0,
@@ -498,6 +556,17 @@ function drawCube(color) {
     0
   );
 
+  // for normals
+  gl.bindBuffer(gl.ARRAY_BUFFER, cubeNormalBuf);
+  gl.vertexAttribPointer(
+    aNormalLocation,
+    cubeNormalBuf.itemSize,
+    gl.FLOAT,
+    false,
+    0,
+    0
+  );
+
 
   // draw elementary arrays - triangle indices
   gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, indexBuf);
@@ -615,11 +684,11 @@ function drawScene() {
 
 
   rightPort();
-  // pushMatrix(matrixStack,mMatrix);
-  // mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
-  // mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
-  // drawMiddleScene();
-  // mMatrix = popMatrix(matrixStack);
+  pushMatrix(matrixStack,mMatrix);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degree0), [0, 1, 0]);
+  mMatrix = mat4.rotate(mMatrix, degToRad(degree1), [1, 0, 0]);
+  drawMiddleScene();
+  mMatrix = popMatrix(matrixStack);
 
 }
 
@@ -687,12 +756,9 @@ function webGLStart() {
   perFragshaderProgram = initShaders(perFragVertexShaderCode,perFragFragShaderCode);
 
 
-  //get locations of attributes and uniforms declared in the shader
-
 
   //enable the attribute arrays
-  
-  gl.enableVertexAttribArray(aPositionLocation);
+
 
 
   //initialize buffers for the square
