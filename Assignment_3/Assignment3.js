@@ -494,7 +494,7 @@ function initCubeMap() {
 			drawScene();
 		});
 	});
-	gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
+	// gl.generateMipmap(gl.TEXTURE_CUBE_MAP);
 	gl.texParameteri(
 		gl.TEXTURE_CUBE_MAP,
 		gl.TEXTURE_MIN_FILTER,
@@ -514,7 +514,7 @@ function initTextures(textureFile) {
 
 function handleTextureLoaded(texture) {
 	gl.bindTexture(gl.TEXTURE_2D, texture);
-	gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // use it to flip Y if needed
+	// gl.pixelStorei(gl.UNPACK	_FLIP_Y_WEBGL, 1); // use it to flip Y if needed
 	gl.texImage2D(
 		gl.TEXTURE_2D, // 2D texture
 		0, // mipmap level
@@ -543,7 +543,7 @@ function drawSkyBox() {
 
 	// transformations
 	mMatrix = mat4.translate(mMatrix, [0, 0, -99.5]);
-	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 1, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 0, 1]);
 	mMatrix = mat4.scale(mMatrix, [200, 200, 200]);
 
 	color = [0.0, 1.0, 1.0, 1.0];
@@ -556,6 +556,8 @@ function drawSkyBox() {
 
 	// transformations
 	mMatrix = mat4.translate(mMatrix, [0, 0, 99.5]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 0, 1]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 1, 0]);
 	mMatrix = mat4.scale(mMatrix, [200, 200, 200]);
 
 	color = [0.0, 1.0, 1.0, 1.0];
@@ -570,6 +572,7 @@ function drawSkyBox() {
 	// transformations
 	mMatrix = mat4.translate(mMatrix, [-99.5, 0, 0]);
 	mMatrix = mat4.rotate(mMatrix, degToRad(90), [0, 1, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 0, 1]);
 	mMatrix = mat4.scale(mMatrix, [200, 200, 200]);
 
 	color = [0.0, 1.0, 1.0, 1.0];
@@ -583,7 +586,8 @@ function drawSkyBox() {
 
 	// transformations
 	mMatrix = mat4.translate(mMatrix, [99.5, 0, 0]);
-	mMatrix = mat4.rotate(mMatrix, degToRad(90), [0, 1, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(-90), [0, 1, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(180), [0, 0, 1]);
 	mMatrix = mat4.scale(mMatrix, [200, 200, 200]);
 
 	color = [0.0, 1.0, 1.0, 1.0];
@@ -611,7 +615,7 @@ function drawSkyBox() {
 
 	// transformations
 	mMatrix = mat4.translate(mMatrix, [0, 99.5, 0]);
-	mMatrix = mat4.rotate(mMatrix, degToRad(-90), [1, 0, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(90), [1, 0, 0]);
 	
 	mMatrix = mat4.scale(mMatrix, [200, 200, 200]);
 
