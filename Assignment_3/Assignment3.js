@@ -925,25 +925,25 @@ function drawTable()
 	pushMatrix(matrixStack,mMatrix);
 	mMatrix = mat4.translate(mMatrix,[-5,-5,-8]);
 	mMatrix =  mat4.scale(mMatrix,[1,10,1]);
-	drawCube(color, woodTexture, 0.0, 1.0, 0.0, 0.0);
+	drawCube(color, woodTexture, 0.0, 1.0, 0.2, 0.0);
 	mMatrix = popMatrix(matrixStack);
 	// leg 1,-1
 	pushMatrix(matrixStack,mMatrix);
 	mMatrix = mat4.translate(mMatrix,[5,-5,-8]);
 	mMatrix =  mat4.scale(mMatrix,[1,10,1]);
-	drawCube(color, woodTexture, 0.0, 1.0, 0.0, 0.0);
+	drawCube(color, woodTexture, 0.0, 1.0, 0.2, 0.0);
 	mMatrix = popMatrix(matrixStack);
 	// leg -1,1
 	pushMatrix(matrixStack,mMatrix);
 	mMatrix = mat4.translate(mMatrix,[-5,-5,8]);
 	mMatrix =  mat4.scale(mMatrix,[1,10,1]);
-	drawCube(color, woodTexture, 0.0, 1.0, 0.0, 0.0);
+	drawCube(color, woodTexture, 0.0, 1.0, 0.2, 0.0);
 	mMatrix = popMatrix(matrixStack);
 	// leg 1,1
 	pushMatrix(matrixStack,mMatrix);
 	mMatrix = mat4.translate(mMatrix,[5,-5,8]);
 	mMatrix =  mat4.scale(mMatrix,[1,10,1]);
-	drawCube(color, woodTexture, 0.0, 1.0, 0.0, 0.0);
+	drawCube(color, woodTexture, 0.0, 1.0, 0.2, 0.0);
 	mMatrix = popMatrix(matrixStack);
 
 	// wood top
