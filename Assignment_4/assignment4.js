@@ -74,7 +74,7 @@ var bgImage;
 var fgImage;
 
 // Image mode
-var isBgOnly=0;
+var isBgOnly=2;
 var isGreyscale=0;
 var isSepia=0;
 
@@ -232,8 +232,10 @@ void main() {
 		alpha = fgtextureColor.a;
 		textureColor = fgtextureColor*alpha + bgtextureColor*(1.0-alpha);
 	}
-	else
+	else if (isbgonly==1)
 		textureColor = bgtextureColor;
+	else
+		textureColor = vec4(0,0,0,1);
 	
 	fragColor = (bright * textureColor);
 	fragColor.rgb = 0.5 + (contrast/100.0) * (fragColor.rgb - 0.5);
@@ -465,50 +467,39 @@ function handleTextureLoaded(texture) {
 function drawScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
-	// stop the current loop of animation
-	if (animation) {
-		window.cancelAnimationFrame(animation);
-	}
-
-	var animate = function () {
-
-		gl.clearColor(0.0, 0.0, 0.0, 1.0);
-		gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
-		gl.enable(gl.DEPTH_TEST);
+	gl.clearColor(0.0, 0.0, 0.0, 1.0);
+	gl.clear(gl.COLOR_BUFFER_BIT | gl.DEPTH_BUFFER_BIT);
+	gl.enable(gl.DEPTH_TEST);
 
 
-		//set up the model matrix
-		mat4.identity(mMatrix);
+	//set up the model matrix
+	mat4.identity(mMatrix);
 
-		// set up the view matrix, multiply into the modelview matrix
-		mat4.identity(vMatrix);
-		vMatrix = mat4.lookAt(eyePos, [xCam, yCam, zCam], [0, 1, 0], vMatrix);
+	// set up the view matrix, multiply into the modelview matrix
+	mat4.identity(vMatrix);
+	vMatrix = mat4.lookAt(eyePos, [xCam, yCam, zCam], [0, 1, 0], vMatrix);
 
-		//set up projection matrix
-		mat4.identity(pMatrix);
-		mat4.perspective(60, 1.0, 0.01, 1000, pMatrix);
+	//set up projection matrix
+	mat4.identity(pMatrix);
+	mat4.perspective(60, 1.0, 0.01, 1000, pMatrix);
 
-		// global rotation, controlled by mouse
-		mMatrix = mat4.rotate(mMatrix, degToRad(zAngle), [0, 1, 0]);
-		mMatrix = mat4.rotate(mMatrix, degToRad(yAngle), [1, 0, 0]);
+	// global rotation, controlled by mouse
+	mMatrix = mat4.rotate(mMatrix, degToRad(zAngle), [0, 1, 0]);
+	mMatrix = mat4.rotate(mMatrix, degToRad(yAngle), [1, 0, 0]);
 
 
-        pushMatrix(matrixStack, mMatrix);
+	pushMatrix(matrixStack, mMatrix);
 
-        // transformations
-        mMatrix = mat4.translate(mMatrix, [0, 0, -200.0]);
-		mMatrix = mat4.rotate(mMatrix,degToRad(180),[0,1,0]);
-        mMatrix = mat4.scale(mMatrix, [235, 235, 1]);
+	// transformations
+	mMatrix = mat4.translate(mMatrix, [0, 0, -200.0]);
+	mMatrix = mat4.rotate(mMatrix,degToRad(180),[0,1,0]);
+	mMatrix = mat4.scale(mMatrix, [235, 235, 1]);
 
-        color = [0.0, 1.0, 1.0, 1.0];
-        drawSquare(color,bgImage,fgImage);
+	color = [0.0, 1.0, 1.0, 1.0];
+	drawSquare(color,bgImage,fgImage);
 
-        mMatrix = popMatrix(matrixStack);
-		 
-		animation = window.requestAnimationFrame(animate);
-	};
+	mMatrix = popMatrix(matrixStack);
 
-	animate();
 }
 
 // This is the entry point from the html
@@ -550,24 +541,24 @@ function webGLStart() {
 	sampleTexture = initTextures(textureFile);
 
 	const elem = document.querySelector('#screenshot');
-  elem.addEventListener('click', () => {
-	drawScene();
-    canvas.toBlob((blob) => {
-      saveBlob(blob, `screencapture-${canvas.width}x${canvas.height}.png`);
-    });
-  });
+	elem.addEventListener('click', () => {
+		drawScene();
+		canvas.toBlob((blob) => {
+			saveBlob(blob, `screencapture-${canvas.width}x${canvas.height}.png`);
+    	});
+  	});
 
-  const saveBlob = (function() {
-    const a = document.createElement('a');
-    document.body.appendChild(a);
-    a.style.display = 'none';
-    return function saveData(blob, fileName) {
-       const url = window.URL.createObjectURL(blob);
-       a.href = url;
-       a.download = fileName;
-       a.click();
-    };
-  }());
+  	const saveBlob = (function() {
+		const a = document.createElement('a');
+		document.body.appendChild(a);
+		a.style.display = 'none';
+		return function saveData(blob, fileName) {
+			const url = window.URL.createObjectURL(blob);
+			a.href = url;
+			a.download = fileName;
+			a.click();
+		};
+  	}());
 
 	drawScene();
 }
@@ -603,9 +594,10 @@ function handleImage(ground) {
 
 function setImageMode(value) {
     isBgOnly = value;
+	drawScene();
 }
 
-function handleCheckbox(value) {
+function handleCheckbox() {
     var checkbox = document.getElementById('greyscale_check');
     isGreyscale = checkbox.checked;
 
@@ -623,6 +615,8 @@ function handleCheckbox(value) {
 
     checkbox = document.getElementById('laplacian_check');
     isLaplacian = checkbox.checked;
+
+	drawScene();
 }
 
 function adjustImage() {
@@ -632,13 +626,26 @@ function adjustImage() {
 
     brightnessValue = brightnessSlider.value;
     contrastValue = contrastSlider.value;
+
+	drawScene();
 }
 
 function resetImage() {
-    bgImage = null;
-    fgImage = null;
-}
+	var elem;
 
-function saveImage() {
+	elem = document.getElementById('none_filter');
+	elem.checked = true;
 
+	elem = document.getElementById('brightnessSlider');
+	elem.value = 100;
+	brightnessValue = 100;
+
+	elem = document.getElementById('contrastSlider');
+	elem.value = 100;
+	contrastValue = 100;
+
+	elem = document.getElementById('none_process_check');
+	elem.checked = true;
+	handleCheckbox();
+	drawScene();
 }
