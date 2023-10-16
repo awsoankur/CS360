@@ -513,7 +513,7 @@ function drawScene() {
 
 // This is the entry point from the html
 function webGLStart() {
-	canvas = document.getElementById("3DTextureMapExample");
+	canvas = document.getElementById("canvas");
 
 	initGL(canvas);
 	shaderProgram = initShaders();
@@ -548,6 +548,27 @@ function webGLStart() {
 	//initialize buffers for the square
 	initSquareBuffer()
 	sampleTexture = initTextures(textureFile);
+
+	const elem = document.querySelector('#screenshot');
+  elem.addEventListener('click', () => {
+	drawScene();
+    canvas.toBlob((blob) => {
+      saveBlob(blob, `screencapture-${canvas.width}x${canvas.height}.png`);
+    });
+  });
+
+  const saveBlob = (function() {
+    const a = document.createElement('a');
+    document.body.appendChild(a);
+    a.style.display = 'none';
+    return function saveData(blob, fileName) {
+       const url = window.URL.createObjectURL(blob);
+       a.href = url;
+       a.download = fileName;
+       a.click();
+    };
+  }());
+
 	drawScene();
 }
 
