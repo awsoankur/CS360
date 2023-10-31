@@ -22,7 +22,7 @@ var eyePos = [0.0, 0.0, 3.0]; // camera/eye position
 var xCam = 0;
 var yCam = 0;
 var zCam = 0;
-var light = [0.0, 1.0, 3.0]; // light position
+var light = [0.0, 1.0, 2.0]; // light position
 var bounce = 1;
 var mode = 0;
 
@@ -79,7 +79,7 @@ void main() {
 	sphereb.color = vec3(0.0,0.0,1.0);
 
 	// grey sphere
-	spheregrey.center = vec3(0.0,-6,0.0);
+	spheregrey.center = vec3(0.0,-6.3,-0.8);
 	spheregrey.radius = 5.0;
 	spheregrey.color = vec3(0.5,0.5,0.5);
 
@@ -133,10 +133,12 @@ void main() {
 		specular = 0.5 * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R, V), 0.0), 10.0);
 		color = vec3(ambient + diffuse + specular);
 	}
+	vec3 curhit = minhitPos;
 	if (mindist == 1000000.0)
 		color = vec3(0.0, 0.0, 0.0);
 	else if (bounce >0 && (mode == 2 || mode == 3)) 
 	{
+		// check for reflective fragment
 		Ray ray2;
 		for(int i=0;i<bounce;i++)
 		{
@@ -188,6 +190,47 @@ void main() {
 				break;
 
 		}
+
+	}
+	if (mode == 3 || mode == 1)
+	{
+		// check for shadow fragment
+		Ray ray2;
+		ray2.origin = curhit;
+		ray2.direction = normalize(lightPos - curhit);
+		mindist = 1000000.0;
+		for(int j=0;j<5;j++){
+			if (j==0)
+				sphere = spherer;
+			else if (j==1)
+				sphere = sphereg;
+			else if (j==2)
+				sphere = sphereb;
+			else
+				sphere = spheregrey;
+
+			L = sphere.center - ray2.origin;
+			tca = dot(L, ray2.direction);
+			if (tca < 0.0) continue;
+			d2 = dot(L, L) - tca * tca;
+			if (d2 > sphere.radius * sphere.radius) continue;
+			thc = sqrt(sphere.radius * sphere.radius - d2);
+			t0 = tca - thc;
+			t1 = tca + thc;
+			if (t0 > t1) t0 = t1;
+			if (t0 < 0.0) continue;
+			hitPos = ray2.origin + t0 * ray2.direction;
+			if (t0 < mindist) {
+				mindist = t0;
+				minhitPos = hitPos;
+				minN = normalize(hitPos - sphere.center);
+			}
+			else
+				continue;
+		}
+		if (mindist != 1000000.0)
+			color = color/2.0;
+
 
 	}
 	fragColor = vec4(color,1.0);
