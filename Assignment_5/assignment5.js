@@ -22,7 +22,7 @@ var eyePos = [0.0, 0.0, 3.0]; // camera/eye position
 var xCam = 0;
 var yCam = 0;
 var zCam = 0;
-var light = [0.0, 1.0, 2.0]; // light position
+var light = [0.0, 2.0, 2.0]; // light position
 var bounce = 1;
 var mode = 0;
 
@@ -48,6 +48,8 @@ struct Sphere {
 	vec3 center;
 	float radius;
 	vec3 color;
+	float shine;
+	float specsize;
 };
 	
 struct Ray {
@@ -57,6 +59,83 @@ struct Ray {
 
 out vec4 fragColor;
 
+// solve the quadratic equation
+bool solveQuadratic(float a, float b, float c, out float t0, out float t1)
+{
+    float disc = b * b - 4. * a * c;
+    
+    if (disc < 0.0)
+    {
+        return false;
+    } 
+    
+    if (disc == 0.0)
+    {
+        t0 = t1 = -b / (2. * a);
+        return true;
+    }
+    
+    t0 = (-b + sqrt(disc)) / (2. * a);
+    t1 = (-b - sqrt(disc)) / (2. * a);
+    return true;    
+}
+
+// check for intersection of ray with sphere
+bool intersectSphere(
+    vec3 origin, 
+    vec3 direction, 
+    Sphere sphere, 
+    out float dist, 
+    out vec3 surfaceNormal, 
+    out vec3 Phit)
+{
+    vec3 L = origin - sphere.center;
+    
+    float a = dot(direction, direction);
+    float b = 2. * dot(direction, L);
+    float c = dot(L, L) - pow(sphere.radius, 2.);
+    
+    float t0;
+    float t1;
+    
+    if (solveQuadratic(a, b, c, t0, t1))
+    {        
+        if (t0 - t1 > 0.0) 
+        {
+        	float temp = t0;
+            t0 = t1;
+            t1 = temp;
+        } 
+ 
+        if (t0 < 0.0)
+        { 
+            t0 = t1; // if t0 is negative, let's use t1 instead 
+            if (t0 < 0.) return false; // both t0 and t1 are negative 
+        }  
+             
+        dist = t0;
+       
+        Phit = origin + dist * direction;
+        surfaceNormal = normalize(Phit - sphere.center);               
+        
+        return true;
+    }  
+     
+    return false;
+}
+
+bool checkShadow(vec3 origin, vec3 direction,Sphere sphere[4])
+{
+
+	for(int i=0;i<4;i++){
+		float t0;
+		vec3 N,hitPos;
+		if (intersectSphere(origin, direction, sphere[i], t0, N, hitPos) == true)
+			return true;
+	}	
+	return false;
+}
+
 void main() {
 	vec3 color;
 
@@ -64,25 +143,38 @@ void main() {
 	Sphere spherer, sphereg, sphereb, spheregrey;
 
 	// red sphere
-	spherer.center = vec3(0.0,0.5,-0.5);
-	spherer.radius = 1.3;
+	spherer.center = vec3(0.0,0.5,-0.9);
+	spherer.radius = 1.5;
 	spherer.color = vec3(1.0,0.0,0.0);
+	spherer.shine = 0.6;
+	spherer.specsize = 2.5;
 
 	// green sphere
-	sphereg.center = vec3(-1.2,0.3,1.0);
+	sphereg.center = vec3(-1.2,0.3,1.1);
 	sphereg.radius = 0.7;
 	sphereg.color = vec3(0.0,1.0,0.0);
+	sphereg.shine = 0.5;
+	sphereg.specsize = 7.0;
 
 	// blue sphere
-	sphereb.center = vec3(1.2,0.3,1.0);
+	sphereb.center = vec3(1.2,0.3,1.1);
 	sphereb.radius = 0.7;
 	sphereb.color = vec3(0.0,0.0,1.0);
+	sphereb.shine = 1.0;
+	sphereb.specsize = 20.0;
 
 	// grey sphere
-	spheregrey.center = vec3(0.0,-6.3,-0.8);
-	spheregrey.radius = 5.0;
-	spheregrey.color = vec3(0.5,0.5,0.5);
+	spheregrey.center = vec3(0.0,-8.3,-0.3);
+	spheregrey.radius = 7.0;
+	spheregrey.color = vec3(0.8,0.8,0.8);
+	spheregrey.shine = 0.5;
+	spheregrey.specsize = 10.0;
 
+	Sphere sphere[4];
+	sphere[0] = spherer;
+	sphere[1] = sphereg;
+	sphere[2] = sphereb;
+	sphere[3] = spheregrey;
 
 	Ray ray;
 	ray.origin = cameraPos;
@@ -90,147 +182,76 @@ void main() {
 	ray.direction = normalize(vec3(screenPos * 2.0 - 1.0, -1.0));
 	vec3 L,hitPos,N,V,R,ambient,diffuse,specular;
 	float tca,d2,thc,t0,t1;
-	Sphere sphere;
 
 	float mindist = 1000000.0;
 	vec3 minhitPos,minN;
 
-	for(int i=0;i<5;i++){
-		if (i==0)
-			sphere = spherer;
-		else if (i==1)
-			sphere = sphereg;
-		else if (i==2)
-			sphere = sphereb;
-		else
-			sphere = spheregrey;
+	for(int i=0;i<4;i++){
 
-		L = sphere.center - ray.origin;
-		tca = dot(L, ray.direction);
-		if (tca < 0.0) continue;
-		d2 = dot(L, L) - tca * tca;
-		if (d2 > sphere.radius * sphere.radius) continue;
-		thc = sqrt(sphere.radius * sphere.radius - d2);
-		t0 = tca - thc;
-		t1 = tca + thc;
-		if (t0 > t1) t0 = t1;
-		if (t0 < 0.0) continue;
-		hitPos = ray.origin + t0 * ray.direction;
+		if (intersectSphere(ray.origin, ray.direction, sphere[i], t0, N, hitPos) == false)
+			continue;
 		if (t0 < mindist) {
 			mindist = t0;
 			minhitPos = hitPos;
-			minN = normalize(hitPos - sphere.center);
+			minN = N;
 		}
 		else
 			continue;
 
-		N = normalize(hitPos - sphere.center);
-		L = lightPos - hitPos;
+		L = normalize(lightPos - hitPos);
 		V = normalize(L);
 		R = reflect(V, N);
-		ambient = 0.2 * sphere.color;
-		diffuse = 0.25 * sphere.color * max(dot(N, L), 0.0);
-		specular = 0.5 * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R, V), 0.0), 10.0);
-		color = vec3(ambient + diffuse + specular);
+		ambient = 0.2 * sphere[i].color;
+		diffuse = 0.4 * sphere[i].color * max(dot(N, L), 0.0);
+		specular = sphere[i].shine * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R,V), 0.0), sphere[i].specsize);
+
+		// check if the fragment is in shadow
+		if ((mode == 1 || mode == 3) && checkShadow(hitPos + 0.001 * L , L, sphere) == true)
+			color = ambient;
+		else	
+			color = vec3(ambient + diffuse + specular);
 	}
 	vec3 curhit = minhitPos;
-	if (mindist == 1000000.0)
+	if (mindist == 1000000.0){
 		color = vec3(0.0, 0.0, 0.0);
+	}
 	else if (bounce >0 && (mode == 2 || mode == 3)) 
 	{
 		// check for reflective fragment
 		Ray ray2;
+		ray2.direction = ray.direction;
+		vec3 newc = vec3(1.0);
 		for(int i=0;i<bounce;i++)
 		{
 			ray2.origin = minhitPos;
-			ray2.direction = reflect(ray.direction, minN);
+			ray2.direction = reflect(ray2.direction, minN);
 			mindist = 1000000.0;
 		
 			// check reflective hit with all spheres again
-			for(int j=0;j<5;j++){
-				if (j==0)
-					sphere = spherer;
-				else if (j==1)
-					sphere = sphereg;
-				else if (j==2)
-					sphere = sphereb;
-				else
-					sphere = spheregrey;
-
-				L = sphere.center - ray2.origin;
-				tca = dot(L, ray2.direction);
-				if (tca < 0.0) continue;
-				d2 = dot(L, L) - tca * tca;
-				if (d2 > sphere.radius * sphere.radius) continue;
-				thc = sqrt(sphere.radius * sphere.radius - d2);
-				t0 = tca - thc;
-				t1 = tca + thc;
-				if (t0 > t1) t0 = t1;
-				if (t0 < 0.0) continue;
-				hitPos = ray2.origin + t0 * ray2.direction;
+			for(int j=0;j<4;j++){
+				if (intersectSphere(ray2.origin + 0.001 * ray2.direction, ray2.direction, sphere[j], t0, N, hitPos) == false)
+					continue;
 				if (t0 < mindist) {
 					mindist = t0;
 					minhitPos = hitPos;
-					minN = normalize(hitPos - sphere.center);
+					minN = N;
 				}
 				else
 					continue;
 
-				N = normalize(hitPos - sphere.center);
-				L = lightPos - hitPos;
+				L = normalize(lightPos - hitPos);
 				V = normalize(L);
 				R = reflect(V, N);
-				ambient = 0.2 * sphere.color;
-				diffuse = 0.25 * sphere.color * max(dot(N, L), 0.0);
-				specular = 0.5 * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R, V), 0.0), 10.0);
-				color = color*0.5 + 0.5*vec3(ambient + diffuse + specular);
+				ambient = 0.2 * sphere[j].color;
+				diffuse = 0.4 * sphere[j].color * max(dot(N, L), 0.0);
+				specular = sphere[j].shine * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R, V), 0.0), sphere[j].specsize);
+				newc = newc*0.1 + 0.9*vec3(ambient + diffuse + specular);
 			}
 			// if no hit, break
 			if (mindist == 1000000.0)
 				break;
-
+			color = (color + newc)/2.0;
 		}
-
-	}
-	if (mode == 3 || mode == 1)
-	{
-		// check for shadow fragment
-		Ray ray2;
-		ray2.origin = curhit;
-		ray2.direction = normalize(lightPos - curhit);
-		mindist = 1000000.0;
-		for(int j=0;j<5;j++){
-			if (j==0)
-				sphere = spherer;
-			else if (j==1)
-				sphere = sphereg;
-			else if (j==2)
-				sphere = sphereb;
-			else
-				sphere = spheregrey;
-
-			L = sphere.center - ray2.origin;
-			tca = dot(L, ray2.direction);
-			if (tca < 0.0) continue;
-			d2 = dot(L, L) - tca * tca;
-			if (d2 > sphere.radius * sphere.radius) continue;
-			thc = sqrt(sphere.radius * sphere.radius - d2);
-			t0 = tca - thc;
-			t1 = tca + thc;
-			if (t0 > t1) t0 = t1;
-			if (t0 < 0.0) continue;
-			hitPos = ray2.origin + t0 * ray2.direction;
-			if (t0 < mindist) {
-				mindist = t0;
-				minhitPos = hitPos;
-				minN = normalize(hitPos - sphere.center);
-			}
-			else
-				continue;
-		}
-		if (mindist != 1000000.0)
-			color = color/2.0;
-
 
 	}
 	fragColor = vec4(color,1.0);
@@ -312,13 +333,15 @@ function degToRad(degrees) {
 
 function moveLight(pos)
 {
-	light = [pos/100,1.0,3.0];
+	light = [pos/100,2.0,2.0];
+	document.getElementById("lightValue").innerHTML = pos/100;
 	drawScene();
 }
 
 function changeBouce(b)
 {
 	bounce = b;
+	document.getElementById("bounceValue").innerHTML = b;
 	drawScene();
 }
 

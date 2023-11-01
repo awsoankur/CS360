@@ -43,10 +43,12 @@
     
     <div>
     <label >Move Light</label>
-      <input type="range" id="light_slider" min="-1500" max="1500" value="0" oninput="moveLight(value)">
+      <input type="range" id="light_slider" min="-600" max="600" value="0" oninput="moveLight(value)">
+      <b id="lightValue">0</b>
     <br>
     <label >Bounce </label>
-    <input type="range" id="bounc_slider" min="1" max="5" value="1" onchange="changeBouce(value)">
+    <input type="range" id="bounc_slider" min="1" max="5" value="1" oninput="changeBouce(value)">
+    <b id="bounceValue"> 1 </b>
     <br>
 
     </div>
