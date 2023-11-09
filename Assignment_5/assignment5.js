@@ -22,9 +22,9 @@ var eyePos = [0.0, 0.0, 3.0]; // camera/eye position
 var xCam = 0;
 var yCam = 0;
 var zCam = 0;
-var light = [0.0, 2.0, 2.0]; // light position
+var light = [0.0, 1.5, 2.0]; // light position
 var bounce = 1;
-var mode = 0;
+var mode = 3;
 
 //////////////////////////////////////////////////////////////////////////
 const vertexShaderCode = `#version 300 es
@@ -65,10 +65,8 @@ bool solveQuadratic(float a, float b, float c, out float t0, out float t1)
     float disc = b * b - 4. * a * c;
     
     if (disc < 0.0)
-    {
         return false;
-    } 
-    
+
     if (disc == 0.0)
     {
         t0 = t1 = -b / (2. * a);
@@ -220,9 +218,9 @@ void main() {
 		// check for reflective fragment
 		Ray ray2;
 		ray2.direction = ray.direction;
-		vec3 newc = vec3(1.0);
 		for(int i=0;i<bounce;i++)
 		{
+			vec3 newc = vec3(1.0);
 			ray2.origin = minhitPos;
 			ray2.direction = reflect(ray2.direction, minN);
 			mindist = 1000000.0;
@@ -245,7 +243,11 @@ void main() {
 				ambient = 0.2 * sphere[j].color;
 				diffuse = 0.4 * sphere[j].color * max(dot(N, L), 0.0);
 				specular = sphere[j].shine * vec3(1.0, 1.0, 1.0) * pow(max(dot(-R, V), 0.0), sphere[j].specsize);
-				newc = newc*0.1 + 0.9*vec3(ambient + diffuse + specular);
+				// check if the fragment is in shadow
+				if ((mode == 1 || mode == 3) && checkShadow(hitPos + 0.001 * L , L, sphere) == true)
+					newc = ambient;
+				else	
+					newc = 1.2 * vec3(ambient + diffuse + specular);
 			}
 			// if no hit, break
 			if (mindist == 1000000.0)
@@ -333,7 +335,7 @@ function degToRad(degrees) {
 
 function moveLight(pos)
 {
-	light = [pos/100,2.0,2.0];
+	light = [pos/100,1.5,2.0];
 	document.getElementById("lightValue").innerHTML = pos/100;
 	drawScene();
 }

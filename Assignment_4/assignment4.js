@@ -1,3 +1,6 @@
+////////////////////////////////////////////////////////////////////////
+// A WebGL program to show texture mapping on a sphere..
+
 var gl;
 var canvas;
 var matrixStack = [];
@@ -11,6 +14,80 @@ var yAngle = 0.0;
 var prevMouseX = 0.0;
 var prevMouseY = 0.0;
 var aPositionLocation;
+var aNormalLocation;
+var aTexCoordLocation;
+var uVMatrixLocation;
+var uMMatrixLocation;
+var uPMatrixLocation;
+var uIsGreyLocation;
+var uIsSepiaLocation;
+var uBrightnessLocation;
+var uConstrastLocation;
+var uIsSmoothLocation;
+var uIsSharpLocation;
+var uIsGradientLocation;
+var uIsLaplacianLocation;
+var uIsBgOnlyLocation;
+
+var uBgTextureLocation;
+var uFgTextureLocation;
+
+var vMatrix = mat4.create(); // view matrix
+var mMatrix = mat4.create(); // model matrix
+var pMatrix = mat4.create(); //projection matrix
+
+var spBuf;
+var spIndexBuf;
+var spNormalBuf;
+var spTexBuf;
+
+var cubeIndexBuf;
+var cubeNormalBuf;
+var cubeVertexBuf;
+var cubeTexBuf;
+
+var sqBuf;
+var sqNormalBuf;
+var sqIndexBuf;
+var sqTexBuf;
+
+var squareNormalBuf;
+var sqVertexIndexBuffer;
+var sqVertexPositionBuffer;
+var squareTexBuf;
+
+var spVerts = [];
+var spIndicies = [];
+var spNormals = [];
+var spTexCoords = [];
+var squareTexCoords = [];
+
+var uTextureLocation;
+var sampleTexture;
+
+var cubemapTexture;
+
+
+// bg and fg images
+var bgImage;
+var fgImage;
+
+// Image mode
+var isBgOnly=2;
+var isGreyscale=0;
+var isSepia=0;
+
+
+//Image properties
+var brightnessValue = 100; // Default value
+var contrastValue = 100;   // Default value
+var isSmooth =0;
+var isSharp=0;
+var isGradient=0;
+var isLaplacian=0;
+
+// Inpur JSON model file to load
+input_JSON = "texture_and_other_files/teapot.json";
 
 var eyePos = [0.0, 0.0, 0.0]; // camera/eye position
 var xCam = 0;
@@ -83,7 +160,6 @@ void main() {
 	vec4 fgtextureColor = texture(fgimageTexture, fragTexCoord);
 	vec4 textureColor;
 	float alpha;
-	float siz = 700.0;
 
 	if (isSmooth==1)
 	{
@@ -92,13 +168,13 @@ void main() {
 		{
 			for(float j=-1.0;j<=1.0;j+=1.0)
 			{
-				vec2 newTexCoord = fragTexCoord + vec2(i/siz,j/siz);
+				vec2 newTexCoord = fragTexCoord + vec2(i/800.0,j/800.0);
 				finalColor = finalColor + texture(bgimageTexture,newTexCoord);
 			}
 		}
 		bgtextureColor = finalColor/9.0;
 	}
-	if (isSharp==1)
+	else if (isSharp==1)
 	{
 		vec4 finalColor = vec4(0.0,0.0,0.0,0.0);
 		for(float i=-1.0 ;i<=1.0;i+=1.0)
@@ -112,18 +188,18 @@ void main() {
 					param = 5.0;
 				else
 					param = -1.0;
-				vec2 newTexCoord = fragTexCoord + vec2(i/siz,j/siz);
+				vec2 newTexCoord = fragTexCoord + vec2(i/800.0,j/800.0);
 				finalColor = finalColor + param*texture(bgimageTexture,newTexCoord);
 			}
 		}
 		bgtextureColor = finalColor;
 	}
-	if (isGrad==1)
+	else if (isGrad==1)
 	{
-		vec4 left = texture(bgimageTexture,fragTexCoord+vec2(0,-1.0/siz));
-		vec4 right = texture(bgimageTexture,fragTexCoord+vec2(0,1.0/siz));
-		vec4 down = texture(bgimageTexture,fragTexCoord+vec2(1.0/siz,0));
-		vec4 up = texture(bgimageTexture,fragTexCoord+vec2(-1.0/siz,0));
+		vec4 up = texture(bgimageTexture,fragTexCoord+vec2(0,-1.0/800.0));
+		vec4 down = texture(bgimageTexture,fragTexCoord+vec2(0,1.0/800.0));
+		vec4 right = texture(bgimageTexture,fragTexCoord+vec2(1.0/800.0,0));
+		vec4 left = texture(bgimageTexture,fragTexCoord+vec2(-1.0/800.0,0));
 		vec4 dy = (up-down)*0.5;
 		vec4 dx = (right-left)*0.5;
 		vec4 gradient = sqrt(dx*dx+dy*dy);
@@ -143,7 +219,7 @@ void main() {
 					param = 4.0;
 				else
 					param = -1.0;
-				vec2 newTexCoord = fragTexCoord + vec2(i/siz,j/siz);
+				vec2 newTexCoord = fragTexCoord + vec2(i/800.0,j/800.0);
 				finalColor = finalColor + param*texture(bgimageTexture,newTexCoord);
 			}
 		}
@@ -174,7 +250,7 @@ void main() {
         float sepiaB = 0.272*fragColor.r + 0.534*fragColor.g + 0.131*fragColor.b;
         fragColor = vec4(sepiaR,sepiaG,sepiaB,1.0);
     }
-    fragColor.a = 1.0;
+    fragColor.a = textureColor.a;
 
 }`;
 
@@ -252,6 +328,141 @@ function degToRad(degrees) {
 	return (degrees * Math.PI) / 180;
 }
 
+function initSquareBuffer() {
+	// buffer for point locations
+	const sqVertices = new Float32Array([
+	  0.5, 0.5, -0.5, 0.5, -0.5, -0.5, 0.5, -0.5,
+	]);
+	sqBuf = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqBuf);
+	gl.bufferData(gl.ARRAY_BUFFER, sqVertices, gl.STATIC_DRAW);
+	sqBuf.itemSize = 2;
+	sqBuf.numItems = 4;
+  
+	// buffer for point indices
+	const sqIndices = new Uint16Array([0, 1, 2, 0, 2, 3]);
+	sqIndexBuf = gl.createBuffer();
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sqIndexBuf);
+	gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, sqIndices, gl.STATIC_DRAW);
+	sqIndexBuf.itemsize = 1;
+	sqIndexBuf.numItems = 6;
+  
+	// buffer for normals
+	const sqNormals = new Float32Array([0, 0, 1, 0, 0, 1, 0, 0, 1, 0, 0, 1])
+	sqNormalBuf = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqNormalBuf);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sqNormals), gl.STATIC_DRAW);
+	sqNormalBuf.itemSize = 3;
+	sqNormalBuf.numItems = sqNormals.length / 3;
+  
+	// buffer for texture coordinates
+	const sqTexCoords = new Uint16Array([0, 0, 1, 0, 1, 1, 0, 1]);
+	sqTexBuf = gl.createBuffer();
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqTexBuf);
+	gl.bufferData(gl.ARRAY_BUFFER, new Float32Array(sqTexCoords), gl.STATIC_DRAW);
+	sqTexBuf.itemSize = 2;
+	sqTexBuf.numItems = sqTexCoords.length / 2;
+  
+}
+
+function drawSquare(color,bgtexture,fgtexture) {
+	// buffer for point locations
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqBuf);
+	gl.vertexAttribPointer(
+	  aPositionLocation,
+	  sqBuf.itemSize,
+	  gl.FLOAT,
+	  false,
+	  0,
+	  0
+	);
+  
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqTexBuf);
+	gl.vertexAttribPointer(
+	  aTexCoordLocation,
+	  sqTexBuf.itemSize,
+	  gl.FLOAT,
+	  false,
+	  0,
+	  0
+	);
+  
+	gl.bindBuffer(gl.ARRAY_BUFFER, sqNormalBuf);
+	gl.vertexAttribPointer(
+	  aNormalLocation,
+	  sqNormalBuf.itemSize,
+	  gl.FLOAT,
+	  false,
+	  0,
+	  0
+	);
+
+	// buffer for point indices
+	gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, sqIndexBuf);
+
+	gl.uniformMatrix4fv(uMMatrixLocation, false, mMatrix);
+	gl.uniformMatrix4fv(uVMatrixLocation, false, vMatrix);
+	gl.uniformMatrix4fv(uPMatrixLocation, false, pMatrix);
+	gl.uniform1f(uBrightnessLocation,brightnessValue/100);
+    gl.uniform1i(uIsGreyLocation,isGreyscale);
+    gl.uniform1i(uIsSepiaLocation,isSepia);
+    gl.uniform1f(uConstrastLocation,contrastValue);
+    gl.uniform1i(uIsSmoothLocation,isSmooth);
+    gl.uniform1i(uIsSharpLocation,isSharp);
+    gl.uniform1i(uIsGradientLocation,isGradient);
+    gl.uniform1i(uIsLaplacianLocation,isLaplacian);
+	gl.uniform1i(uIsBgOnlyLocation,isBgOnly);
+
+	gl.activeTexture(gl.TEXTURE1); // set texture unit 1 to use
+	gl.bindTexture(gl.TEXTURE_2D, bgtexture); // bind the texture object 
+	gl.uniform1i(uBgTextureLocation, 1); // pass the texture unit
+
+	gl.activeTexture(gl.TEXTURE0); // set texture unit 0 to use
+	gl.bindTexture(gl.TEXTURE_2D, fgtexture); // bind the texture object 
+	gl.uniform1i(uFgTextureLocation, 0); // pass the texture unit
+
+	// now draw the square
+	gl.drawElements(
+		gl.TRIANGLES,
+		sqIndexBuf.numItems,
+		gl.UNSIGNED_SHORT,
+		0
+	);
+}
+
+function initTextures(textureFile) {
+	var tex = gl.createTexture();
+	tex.image = new Image();
+	tex.image.src = textureFile;
+	tex.image.onload = function () {
+		handleTextureLoaded(tex);
+	};
+	return tex;
+}
+
+function handleTextureLoaded(texture) {
+	gl.bindTexture(gl.TEXTURE_2D, texture);
+	// gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1); // use it to flip Y if needed
+	gl.texImage2D(
+		gl.TEXTURE_2D, // 2D texture
+		0, // mipmap level
+		gl.RGBA, // internal format
+		gl.RGBA, // format
+		gl.UNSIGNED_BYTE, // type of data
+		texture.image // array or <img>
+	);
+
+	gl.generateMipmap(gl.TEXTURE_2D);
+	gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+	gl.texParameteri(
+		gl.TEXTURE_2D,
+		gl.TEXTURE_MIN_FILTER,
+		gl.LINEAR_MIPMAP_LINEAR
+	);
+
+	drawScene();
+}
+
 function drawScene() {
 	gl.viewport(0, 0, gl.viewportWidth, gl.viewportHeight);
 
@@ -299,13 +510,141 @@ function webGLStart() {
 
 	//get locations of attributes declared in the vertex shader
 	aPositionLocation = gl.getAttribLocation(shaderProgram, "aPosition");
+	aNormalLocation = gl.getAttribLocation(shaderProgram,"aNormal");
+	aTexCoordLocation = gl.getAttribLocation(shaderProgram, "aTexCoords");
 
+	uMMatrixLocation = gl.getUniformLocation(shaderProgram, "uMMatrix");
+	uPMatrixLocation = gl.getUniformLocation(shaderProgram, "uPMatrix");
+	uVMatrixLocation = gl.getUniformLocation(shaderProgram, "uVMatrix");
 	uColorLocation = gl.getUniformLocation(shaderProgram,"color");
+    uIsGreyLocation = gl.getUniformLocation(shaderProgram,"isGreyscale");
+    uIsSepiaLocation = gl.getUniformLocation(shaderProgram,"isSepia");
+    uBrightnessLocation = gl.getUniformLocation(shaderProgram,"bright");
+    uConstrastLocation = gl.getUniformLocation(shaderProgram,"contrast");
+    uIsSmoothLocation = gl.getUniformLocation(shaderProgram,"isSmooth");
+    uIsSharpLocation = gl.getUniformLocation(shaderProgram,"isSharp");
+    uIsGradientLocation = gl.getUniformLocation(shaderProgram,"isGrad");
+    uIsLaplacianLocation = gl.getUniformLocation(shaderProgram,"isLaplace");
+	uIsBgOnlyLocation = gl.getUniformLocation(shaderProgram,"isbgonly");
 
+	//texture location in shader
+	uBgTextureLocation = gl.getUniformLocation(shaderProgram, "bgimageTexture");
+	uFgTextureLocation = gl.getUniformLocation(shaderProgram, "fgimageTexture");
 	//enable the attribute arrays
 	gl.enableVertexAttribArray(aPositionLocation);
+	gl.enableVertexAttribArray(aTexCoordLocation);
 	gl.enableVertexAttribArray(aNormalLocation);
 
 	//initialize buffers for the square
+	initSquareBuffer()
+	sampleTexture = initTextures(textureFile);
+
+	const elem = document.querySelector('#screenshot');
+	elem.addEventListener('click', () => {
+		drawScene();
+		canvas.toBlob((blob) => {
+			saveBlob(blob, `screencapture-${canvas.width}x${canvas.height}.png`);
+    	});
+  	});
+
+  	const saveBlob = (function() {
+		const a = document.createElement('a');
+		document.body.appendChild(a);
+		a.style.display = 'none';
+		return function saveData(blob, fileName) {
+			const url = window.URL.createObjectURL(blob);
+			a.href = url;
+			a.download = fileName;
+			a.click();
+		};
+  	}());
+
+	drawScene();
+}
+
+function handleImage(ground) {
+    var input = document.getElementById('imageInput'+ground);
+    var image = input.files[0];
+
+    if (image) {
+      // You can perform additional checks or operations here if needed
+      // For example, you might want to check the file type or size.
+
+      // Create a FileReader to read the selected image as data URL
+      var reader = new FileReader();
+
+      reader.onload = function (e) {
+        var imageDataUrl = e.target.result;
+
+        // Store the image data URL in a JavaScript variable
+        // You can use this variable as needed in your application
+        var imageVariable = imageDataUrl;
+        if (ground==0)
+            bgImage = initTextures(imageVariable);
+        else
+            fgImage = initTextures(imageVariable);
+
+      };
+
+      // Read the image as data URL
+      reader.readAsDataURL(image);
+    }
+}
+
+function setImageMode(value) {
+    isBgOnly = value;
+	drawScene();
+}
+
+function handleCheckbox() {
+    var checkbox = document.getElementById('greyscale_check');
+    isGreyscale = checkbox.checked;
+
+    checkbox = document.getElementById('sepia_check');
+    isSepia = checkbox.checked;
+
+    checkbox = document.getElementById('smooth_check');
+    isSmooth = checkbox.checked;
+
+    checkbox = document.getElementById('sharpen_check');
+    isSharp = checkbox.checked;
+
+    checkbox = document.getElementById('gradient_check');
+    isGradient = checkbox.checked;
+
+    checkbox = document.getElementById('laplacian_check');
+    isLaplacian = checkbox.checked;
+
+	drawScene();
+}
+
+function adjustImage() {
+    // Retrieve slider values
+    var brightnessSlider = document.getElementById('brightnessSlider');
+    var contrastSlider = document.getElementById('contrastSlider');
+
+    brightnessValue = brightnessSlider.value;
+    contrastValue = contrastSlider.value;
+
+	drawScene();
+}
+
+function resetImage() {
+	var elem;
+
+	elem = document.getElementById('none_filter');
+	elem.checked = true;
+
+	elem = document.getElementById('brightnessSlider');
+	elem.value = 100;
+	brightnessValue = 100;
+
+	elem = document.getElementById('contrastSlider');
+	elem.value = 100;
+	contrastValue = 100;
+
+	elem = document.getElementById('none_process_check');
+	elem.checked = true;
+	handleCheckbox();
 	drawScene();
 }
